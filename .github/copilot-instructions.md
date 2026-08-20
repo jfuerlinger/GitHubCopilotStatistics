@@ -5,10 +5,13 @@
 This repository collects Copilot CLI session-usage data and forwards it to a webhook. The main flow is:
 
 - `.github/hooks/copilot-usage-webhook.json` registers a Copilot CLI `agentStop` hook.
-- The hook runs `scripts/send-copilot-session-usage.py` when a Copilot session ends.
+- The hook loads and runs the sender from the public
+  [Copilot usage webhook Gist](https://gist.github.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363)
+  when a Copilot session ends.
 - The script reads the hook payload from stdin, gathers repository metadata and usage stats, and POSTs a JSON payload to a webhook.
 
-The code is intentionally small and focused: read the hook config and the Python script together to understand the end-to-end behavior.
+The code is intentionally small and focused: read the hook config and the
+linked Gist together to understand the end-to-end behavior.
 
 ## Commands
 
@@ -16,8 +19,8 @@ There is no formal build, test, or lint pipeline configured for this repository.
 
 Useful commands for this repo:
 
-- Run the webhook sender directly:
-  - `python3 scripts/send-copilot-session-usage.py`
+- Run the Gist-hosted sender directly:
+  - `python3 <(curl --fail --silent --show-error --location https://gist.githubusercontent.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363/raw/send-copilot-session-usage.py)`
 - Inspect or validate the hook registration:
   - `.github/hooks/copilot-usage-webhook.json`
 
@@ -29,11 +32,12 @@ The key pieces are:
 
 1. Hook registration
    - `.github/hooks/copilot-usage-webhook.json` defines the Copilot CLI hook.
-   - The hook is executed with the repository root as `cwd` and should continue to invoke the Python script from there.
+   - The hook is executed with the repository root as `cwd` and downloads the
+     Python source from the Gist before running it.
    - After changing the hook config, remind users to restart Copilot CLI because the CLI loads hook configuration when a session starts.
 
 2. Session usage sender
-   - `scripts/send-copilot-session-usage.py` is the single implementation point for payload generation.
+   - The public Gist is the single implementation point for payload generation.
    - It expects JSON from stdin and extracts:
      - `sessionId` or `session_id`
      - `cwd`

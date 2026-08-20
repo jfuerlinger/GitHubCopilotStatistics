@@ -1,8 +1,10 @@
 # GitHub Copilot session usage webhook
 
 `.github/hooks/copilot-usage-webhook.json` registers a Copilot CLI `agentStop`
-hook. Restart Copilot CLI after cloning or changing this repository; the CLI
-loads hook configuration when a session starts.
+hook. It loads the webhook sender from the public
+[Copilot usage webhook Gist](https://gist.github.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363)
+when the hook runs. Restart Copilot CLI after cloning or changing this
+repository; the CLI loads hook configuration when a session starts.
 
 After every completed Copilot agent interaction in this repository, the hook
 sends the cumulative session usage as a JSON `POST` to
@@ -15,55 +17,55 @@ contains:
 * Input, output, cache, reasoning, and GitHub AI-credit values, both overall
   and per model. AI credits are rounded to two decimal places.
 
-  The default webhook URL expires on August 27, 2026.
+The default webhook URL expires on August 27, 2026.
 
-  For example, the webhook receives a payload like:
+For example, the webhook receives a payload like:
 
-  ```json
-  {
-    "event": "copilot.agent_stop",
-    "session": {
-      "id": "fe2e8da1-c625-4d80-9a0b-92434572e33a"
+```json
+{
+  "event": "copilot.agent_stop",
+  "session": {
+    "id": "fe2e8da1-c625-4d80-9a0b-92434572e33a"
+  },
+  "interaction": {
+    "captured_at": 1787254818129,
+    "stop_reason": "end_turn"
+  },
+  "repository": {
+    "cwd": "/Users/joe/Projects/Privat/GitHubCopilotStatistics",
+    "root": "/Users/joe/Projects/Privat/GitHubCopilotStatistics",
+    "remote_origin": null,
+    "branch": "main",
+    "commit": "HEAD"
+  },
+  "usage": {
+    "source": "session-store",
+    "tokens": {
+      "input_tokens": 193848,
+      "output_tokens": 3475,
+      "cache_read_tokens": 163712,
+      "cache_write_tokens": 0,
+      "reasoning_tokens": 1728,
+      "github_ai_credits": 5.05
     },
-    "interaction": {
-      "captured_at": 1787254818129,
-      "stop_reason": "end_turn"
-    },
-    "repository": {
-      "cwd": "/Users/joe/Projects/Privat/GitHubCopilotStatistics",
-      "root": "/Users/joe/Projects/Privat/GitHubCopilotStatistics",
-      "remote_origin": null,
-      "branch": "main",
-      "commit": "HEAD"
-    },
-    "usage": {
-      "source": "session-store",
-      "tokens": {
+    "by_model": [
+      {
+        "model": "mai-code-1-flash-picker",
         "input_tokens": 193848,
         "output_tokens": 3475,
         "cache_read_tokens": 163712,
         "cache_write_tokens": 0,
         "reasoning_tokens": 1728,
-        "github_ai_credits_nano": 5051790000
-      },
-      "by_model": [
-        {
-          "model": "mai-code-1-flash-picker",
-          "input_tokens": 193848,
-          "output_tokens": 3475,
-          "cache_read_tokens": 163712,
-          "cache_write_tokens": 0,
-          "reasoning_tokens": 1728,
-          "github_ai_credits_nano": 5051790000
-        }
-      ]
-    }
+        "github_ai_credits": 5.05
+      }
+    ]
   }
-  ```
+}
+```
 
-  Usage values are read from Copilot's local `session-store.db` via Python's
-  standard-library SQLite client. If that store has not been updated by the time
-  the hook fires, the script falls back to the session event log and sends the
+Usage values are read from Copilot's local `session-store.db` via Python's
+standard-library SQLite client. If that store has not been updated by the time
+the hook fires, the script falls back to the session event log and sends the
 available output-token counts with `"source": "events-jsonl-output-only"`.
 
 Set `COPILOT_USAGE_WEBHOOK_URL` before starting Copilot CLI to override the

@@ -4,8 +4,8 @@
     "agentStop": [
       {
         "type": "command",
-        "bash": "python3 scripts/send-copilot-session-usage.py",
-        "powershell": "python scripts/send-copilot-session-usage.py",
+        "bash": "python3 <(curl --fail --silent --show-error --location https://gist.githubusercontent.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363/raw/send-copilot-session-usage.py)",
+        "powershell": "python -c (Invoke-WebRequest -UseBasicParsing -Uri 'https://gist.githubusercontent.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363/raw/send-copilot-session-usage.py').Content",
         "cwd": ".",
         "timeoutSec": 10
       }
