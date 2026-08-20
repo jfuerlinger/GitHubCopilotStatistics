@@ -8,7 +8,7 @@ repository; the CLI loads hook configuration when a session starts.
 
 After every completed Copilot agent interaction in this repository, the hook
 sends the cumulative session usage as a JSON `POST` to
-`https://webhook.site/1bc3a2d1-2761-4d7f-86ed-ff8081bc396b`. The payload
+[https://webhook.site/1bc3a2d1-2761-4d7f-86ed-ff8081bc396b](https://webhook.site/1bc3a2d1-2761-4d7f-86ed-ff8081bc396b). The payload
 contains:
 
 * The session ID, interaction timestamp, and stop reason.
