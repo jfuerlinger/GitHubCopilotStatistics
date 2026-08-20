@@ -15,6 +15,8 @@ contains:
 * Input, output, cache, reasoning, and GitHub AI-credit values, both overall
   and per model. AI credits are rounded to two decimal places.
 
+  The default webhook URL expires on August 27, 2026.
+
   For example, the webhook receives a payload like:
 
   ```json
