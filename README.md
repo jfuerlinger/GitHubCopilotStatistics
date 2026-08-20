@@ -42,7 +42,7 @@ contains:
         "cache_read_tokens": 163712,
         "cache_write_tokens": 0,
         "reasoning_tokens": 1728,
-        "github_ai_credits": 5.05
+        "github_ai_credits_nano": 5051790000
       },
       "by_model": [
         {
@@ -52,7 +52,7 @@ contains:
           "cache_read_tokens": 163712,
           "cache_write_tokens": 0,
           "reasoning_tokens": 1728,
-          "github_ai_credits": 5.05
+          "github_ai_credits_nano": 5051790000
         }
       ]
     }
