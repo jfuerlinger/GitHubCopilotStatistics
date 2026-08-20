@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "python3 scripts/send-copilot-session-usage.py",
+        "powershell": "python scripts/send-copilot-session-usage.py",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
