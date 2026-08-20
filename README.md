@@ -15,9 +15,53 @@ contains:
 * Input, output, cache, reasoning, and GitHub AI-credit values, both overall
   and per model. AI credits are rounded to two decimal places.
 
-Usage values are read from Copilot's local `session-store.db` via Python's
-standard-library SQLite client. If that store has not been updated by the time
-the hook fires, the script falls back to the session event log and sends the
+  For example, the webhook receives a payload like:
+
+  ```json
+  {
+    "event": "copilot.agent_stop",
+    "session": {
+      "id": "fe2e8da1-c625-4d80-9a0b-92434572e33a"
+    },
+    "interaction": {
+      "captured_at": 1787254818129,
+      "stop_reason": "end_turn"
+    },
+    "repository": {
+      "cwd": "/Users/joe/Projects/Privat/GitHubCopilotStatistics",
+      "root": "/Users/joe/Projects/Privat/GitHubCopilotStatistics",
+      "remote_origin": null,
+      "branch": "main",
+      "commit": "HEAD"
+    },
+    "usage": {
+      "source": "session-store",
+      "tokens": {
+        "input_tokens": 193848,
+        "output_tokens": 3475,
+        "cache_read_tokens": 163712,
+        "cache_write_tokens": 0,
+        "reasoning_tokens": 1728,
+        "github_ai_credits": 5.05
+      },
+      "by_model": [
+        {
+          "model": "mai-code-1-flash-picker",
+          "input_tokens": 193848,
+          "output_tokens": 3475,
+          "cache_read_tokens": 163712,
+          "cache_write_tokens": 0,
+          "reasoning_tokens": 1728,
+          "github_ai_credits": 5.05
+        }
+      ]
+    }
+  }
+  ```
+
+  Usage values are read from Copilot's local `session-store.db` via Python's
+  standard-library SQLite client. If that store has not been updated by the time
+  the hook fires, the script falls back to the session event log and sends the
 available output-token counts with `"source": "events-jsonl-output-only"`.
 
 Set `COPILOT_USAGE_WEBHOOK_URL` before starting Copilot CLI to override the
