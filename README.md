@@ -177,7 +177,7 @@ az functionapp deployment list-publishing-profiles `
   --xml
 ```
 
-Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` sowohl den Ordner `web` und die verwalteten Functions als auch die kompilierte eigenständige Azure Function App `app-gcstatistics-poc`. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
+Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` sowohl den Ordner `web` und die verwalteten Functions als auch die kompilierte eigenständige Azure Function App `app-gcstatistics-poc`. Beide Deployments laufen nur, wenn sich die jeweiligen Quellen geändert haben: Die eigenständige Function App wird bei Änderungen unter `api/**` ausgeliefert, die Static Web App bei Änderungen unter `web/**` oder `api/**` (weil sie die verwalteten Functions mit ausrollt). Ein manueller `workflow_dispatch` deployt immer beide Ziele. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
 
 ### API
 

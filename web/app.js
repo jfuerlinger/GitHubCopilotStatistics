@@ -1,5 +1,6 @@
-const elements = Object.fromEntries(["status","from","to","actor","load","summary","chart","details","repoBreakdown"].map(id => [id, document.getElementById(id)]));
+const elements = Object.fromEntries(["status","from","to","actor","load","summary","chart","details"].map(id => [id, document.getElementById(id)]));
 elements.creditsChart = document.getElementById("credits-chart");
+elements.repoBreakdown = document.getElementById("repo-breakdown");
 elements.themeToggle = document.getElementById("theme-toggle");
 elements.themeIcon = document.getElementById("theme-icon");
 elements.themeLabel = document.getElementById("theme-label");
