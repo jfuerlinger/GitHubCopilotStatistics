@@ -1,0 +1,17 @@
+[project]
+name = "githubcopilotstatistics"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Josef Fürlinger", email = "josef.fuerlinger@smartpoint.at" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+githubcopilotstatistics = "githubcopilotstatistics:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
