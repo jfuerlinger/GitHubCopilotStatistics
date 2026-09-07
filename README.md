@@ -3,13 +3,13 @@
 `.github/hooks/copilot-usage-webhook.json` registers a Copilot CLI `agentStop`
 hook. It loads the webhook sender from the public
 [Copilot usage webhook Gist](https://gist.github.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363)
-when the hook runs. Restart Copilot CLI after cloning or changing this
-repository; the CLI loads hook configuration when a session starts.
+when the hook runs.
 
 After every completed Copilot agent interaction in this repository, the hook
-sends the cumulative session usage as a JSON `POST` to
-[https://webhook.site/#!/view/1bc3a2d1-2761-4d7f-86ed-ff8081bc396b/f084248d-df6d-402d-aedd-1f09e79b3c97/1](https://webhook.site/#!/view/1bc3a2d1-2761-4d7f-86ed-ff8081bc396b/f084248d-df6d-402d-aedd-1f09e79b3c97/1). The payload
-contains:
+sends the cumulative session usage as a JSON `POST`. By default it targets the
+standalone Azure Function App at
+`https://app-gcstatistics-poc.azurewebsites.net/api/usage`; the destination can
+be overridden with `COPILOT_USAGE_WEBHOOK_URL`. The payload contains:
 
 * The session ID, interaction timestamp, and stop reason.
 * The Git working directory, repository root, sanitized `origin` URL, branch,
@@ -17,7 +17,16 @@ contains:
 * Input, output, cache, reasoning, and GitHub AI-credit values, both overall
   and per model. AI credits are rounded to two decimal places.
 
-**The default webhook URL expires on August 27, 2026.**
+The endpoint requires the shared ingestion key. Set
+`COPILOT_USAGE_INGESTION_KEY` before starting Copilot CLI; the hook appends it
+as the URL-encoded `key` query parameter (see "Azure-Lösung" below for the
+alternative header-based option and both endpoint variants).
+
+> **Note:** Restart Copilot CLI after cloning this repository or after
+> changing any hook-related environment variable (`COPILOT_USAGE_WEBHOOK_URL`,
+> `COPILOT_USAGE_ACTOR`,
+> `COPILOT_USAGE_INGESTION_KEY`) — the CLI only loads hook configuration when a
+> session starts.
 
 For example, the webhook receives a payload like:
 
@@ -77,16 +86,34 @@ standard-library SQLite client. If that store has not been updated by the time
 the hook fires, the script falls back to the session event log and sends the
 available output-token counts with `"source": "events-jsonl-output-only"`.
 
-Der Hook verwendet standardmäßig `https://app-gcstatistics-poc.azurewebsites.net/api/usage` und ergänzt den Key aus `COPILOT_USAGE_INGESTION_KEY`. Setze diese Variable vor dem Start von Copilot CLI. `COPILOT_USAGE_WEBHOOK_URL` kann weiterhin für Entwicklung oder Tests überschrieben werden.
-
 ## Azure-Lösung
 
 Die Anwendung besteht aus:
 
-- **Azure Static Web Apps (Free):** geschütztes Dashboard und verwaltete Azure Functions.
-- **Azure Function App (Consumption Plan, Y1):** optionaler eigenständiger Endpunkt für den Usage-Webhook inkl. Application Insights.
-- **Azure Table Storage:** zwei sehr günstige Tabellen für Sessions und den Repository-Katalog.
-- **TypeScript Azure Functions:** validieren Webhooks, speichern Sessions idempotent und aggregieren Monatswerte.
+- **Azure Static Web Apps (Free):** geschütztes Dashboard sowie eine verwaltete
+  Kopie der Functions für Dashboard- und API-Zugriffe.
+- **Azure Function App (Consumption Plan, Y1):** standardmäßig vom Hook
+  verwendeter, eigenständiger Ingestion-Endpunkt inklusive Application Insights
+  und Log-Analytics-Workspace.
+- **Azure Table Storage:** die Tabellen `CopilotUsage` für Session-/Modellwerte
+  und `CopilotRepositories` für den Repository-Katalog.
+- **TypeScript Azure Functions:** validieren Webhooks, speichern Sessions
+  idempotent und aggregieren Monatswerte.
+
+Sowohl die verwalteten Functions der Static Web App als auch die eigenständige
+Function App verwenden denselben Quellcode aus `api`, denselben Ingestion Key
+und dieselben Storage-Tabellen. Dadurch stehen zwei mögliche Endpunkte bereit:
+
+| Variante | URL | Verwendung |
+|---|---|---|
+| Eigenständige Function App | `https://<function-app>.azurewebsites.net/api/usage` | Standardziel des Hooks; separates Monitoring über Application Insights |
+| Static Web App | `https://<static-web-app>.azurestaticapps.net/api/usage` | Alternative, wenn Ingestion und Dashboard über denselben Host laufen sollen |
+
+Für beide Endpunkte kann der Schlüssel als Query-Parameter `key` oder im Header
+`x-ingestion-key` gesendet werden. Der Hook verwendet standardmäßig
+`COPILOT_USAGE_INGESTION_KEY` als Query-Parameter. Für Entwicklung, Tests oder
+die Static-Web-App-Variante lässt sich die vollständige Ziel-URL über
+`COPILOT_USAGE_WEBHOOK_URL` überschreiben.
 
 Jede Kombination aus Session und Modell wird mit einem stabilen Schlüssel gespeichert. Sendet der Hook während derselben Session erneut kumulierte Werte, wird der vorhandene Datensatz ersetzt statt doppelt gezählt. Eine Session wird dem Monat ihres zuletzt empfangenen `captured_at` zugeordnet.
 
@@ -94,20 +121,33 @@ Table Storage hat keinen dauerhaft garantierten Gratis-Tarif, verursacht bei die
 
 ### Benutzerzuordnung
 
-Der Beispiel-Payload enthält keine Benutzeridentität. Die Function bestimmt `actor` in dieser Reihenfolge:
+Der Gist-Sender ermittelt den Actor automatisch und setzt ihn als `actor`-Feld
+im Payload. Die Function bestimmt `actor` in dieser Reihenfolge:
 
-1. `actor` im JSON (String oder Objekt mit `login`, `name` oder `id`)
+1. `actor` im JSON (String oder Objekt mit `login`, `name` oder `id`) — der
+   Gist-Sender füllt dies automatisch, in dieser Reihenfolge:
+   `COPILOT_USAGE_ACTOR`-Umgebungsvariable → `GITHUB_ACTOR` (z. B. in GitHub
+   Actions gesetzt) → lokaler `git config user.name` → `git config user.email`.
 2. Query-Parameter `actor`
 3. Header `x-copilot-actor`
-4. `unknown`
+4. `unknown` (falls nichts davon verfügbar ist, z. B. ohne lokale Git-Identität)
 
-Für den unveränderten Gist-Sender kann pro Arbeitsplatz beispielsweise folgende URL gesetzt werden:
+Um den Actor manuell zu überschreiben, z. B. für einen abweichenden Anzeigenamen,
+genügt es, `COPILOT_USAGE_ACTOR` vor dem Start von Copilot CLI zu setzen:
+
+```powershell
+$env:COPILOT_USAGE_ACTOR = "joe"
+```
+
+Alternativ lässt sich der Actor auch über die Ziel-URL erzwingen (Query-Parameter
+oder Header sind gegenüber dem in der URL sichtbaren Query-Parameter vorzuziehen,
+weil Geheimnisse in URLs in Logs auftauchen können):
 
 ```text
 COPILOT_USAGE_WEBHOOK_URL=https://<app>.azurestaticapps.net/api/usage?actor=joe&key=<ingestion-key>
 ```
 
-Ein `actor`-Feld oder Header ist vorzuziehen, weil Geheimnisse in URLs in Logs auftauchen können. Nach Änderung der Umgebungsvariable Copilot CLI neu starten.
+(siehe Neustart-Hinweis oben, nachdem eine dieser Umgebungsvariablen geändert wurde).
 
 ### Bereitstellen
 
@@ -138,6 +178,7 @@ az functionapp deployment list-publishing-profiles `
 ```
 
 Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` sowohl den Ordner `web` und die verwalteten Functions als auch die kompilierte eigenständige Azure Function App `app-gcstatistics-poc`. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
+
 ### API
 
 | Methode | Route | Zweck |
