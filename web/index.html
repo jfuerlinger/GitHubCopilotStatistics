@@ -54,12 +54,11 @@
     <section class="panel" aria-labelledby="details-title">
       <div class="panel-heading"><div><span class="eyebrow">Details</span><h2 id="details-title">Verbrauch nach Person und Modell</h2></div></div>
       <div class="tool-area" aria-label="Werkzeuge für die Detailansicht">
-        <fieldset class="group-by">
-          <legend>Gruppieren nach</legend>
-          <label><input type="checkbox" class="group-by-option" value="date" checked>Datum</label>
-          <label><input type="checkbox" class="group-by-option" value="actor" checked>Person</label>
-          <label><input type="checkbox" class="group-by-option" value="model" checked>Modell</label>
-        </fieldset>
+        <label>Gruppieren nach<select id="group-by">
+          <option value="" selected>Keine Gruppierung</option>
+          <option value="actor">Person</option>
+          <option value="model">Modell</option>
+        </select></label>
         <label>Datums-Granularität<select id="date-granularity">
           <option value="day">Tag</option>
           <option value="month" selected>Monat</option>

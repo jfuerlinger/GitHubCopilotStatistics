@@ -7,7 +7,7 @@ elements.themeLabel = document.getElementById("theme-label");
 elements.detailsHead = document.getElementById("details-head");
 elements.creditPrice = document.getElementById("credit-price");
 elements.dateGranularity = document.getElementById("date-granularity");
-const groupByInputs = [...document.querySelectorAll(".group-by-option")];
+const groupBySelect = document.getElementById("group-by");
 
 const THEME_KEY = "copilot-usage-theme";
 function applyTheme(theme) {
@@ -72,8 +72,8 @@ function creditPrice() {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
-function activeDimensions() {
-  return groupByInputs.filter(input => input.checked).map(input => input.value);
+function groupDimension() {
+  return groupBySelect.value === "actor" || groupBySelect.value === "model" ? groupBySelect.value : "";
 }
 
 function dateGranularity() {
@@ -95,21 +95,37 @@ function normalize(row) {
   };
 }
 
-function groupRows(source) {
-  const dimensions = activeDimensions();
-  const groups = new Map();
+function detailRows(source) {
+  const rowsByKey = new Map();
   source.map(normalize).forEach(row => {
-    const key = dimensions.map(dimension => row[dimension]).join("\u0000");
-    let group = groups.get(key);
-    if (!group) {
-      group = { date: "Alle", actor: "Alle", model: "Alle" };
-      METRICS.forEach(([metric]) => { group[metric] = 0; });
-      dimensions.forEach(dimension => { group[dimension] = row[dimension]; });
-      groups.set(key, group);
+    const key = `${row.date}\u0000${row.actor}\u0000${row.model}`;
+    let entry = rowsByKey.get(key);
+    if (!entry) {
+      entry = { date: row.date, actor: row.actor, model: row.model };
+      METRICS.forEach(([metric]) => { entry[metric] = 0; });
+      rowsByKey.set(key, entry);
     }
-    METRICS.forEach(([metric]) => { group[metric] += row[metric]; });
+    METRICS.forEach(([metric]) => { entry[metric] += row[metric]; });
   });
-  return [...groups.values()].sort((a, b) => `${a.date}${a.actor}${a.model}`.localeCompare(`${b.date}${b.actor}${b.model}`));
+  return [...rowsByKey.values()].sort((a, b) => `${a.date}${a.actor}${a.model}`.localeCompare(`${b.date}${b.actor}${b.model}`));
+}
+
+function sumRows(source) {
+  const total = {};
+  METRICS.forEach(([metric]) => { total[metric] = source.reduce((sum, row) => sum + row[metric], 0); });
+  return total;
+}
+
+function groupDetailRows(source) {
+  const dimension = groupDimension();
+  if (!dimension) return [{ label: "", rows: source }];
+  const groups = new Map();
+  source.forEach(row => {
+    const key = row[dimension];
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+  return [...groups.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([label, rows]) => ({ label, rows }));
 }
 
 function render() {
@@ -136,14 +152,23 @@ function render() {
 
   elements.repoBreakdown.innerHTML = repoBreakdown.length ? repoBreakdown.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.repository)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td><td class="number">${euro.format(row.githubAiCredits * creditPrice())}</td></tr>`).join("") : '<tr><td colspan="4" class="empty">Keine Daten.</td></tr>';
 
-  const dimensions = activeDimensions();
-  const shownDimensions = dimensions.length ? DIMENSIONS.filter(([key]) => dimensions.includes(key)) : DIMENSIONS;
-  const grouped = groupRows(visible);
-  elements.detailsHead.innerHTML = shownDimensions.map(([, label]) => `<th>${label}</th>`).join("") + METRICS.map(([, label]) => `<th class="number">${label}</th>`).join("");
-  const columnCount = shownDimensions.length + METRICS.length;
-  elements.details.innerHTML = grouped.length ? grouped.map(row =>
-    `<tr>${shownDimensions.map(([key]) => `<td>${escapeHtml(row[key])}</td>`).join("")}${METRICS.map(([metric,, format]) => `<td class="number">${format(row[metric])}</td>`).join("")}</tr>`
-  ).join("") : `<tr><td colspan="${columnCount}" class="empty">Keine Daten.</td></tr>`;
+  const dimension = groupDimension();
+  const dimensionLabel = (DIMENSIONS.find(([key]) => key === dimension) || [, ""])[1];
+  const details = detailRows(visible);
+  const groups = groupDetailRows(details);
+  elements.detailsHead.innerHTML = DIMENSIONS.map(([, label]) => `<th>${label}</th>`).join("") + METRICS.map(([, label]) => `<th class="number">${label}</th>`).join("");
+  const columnCount = DIMENSIONS.length + METRICS.length;
+  const metricCells = row => METRICS.map(([metric,, format]) => `<td class="number">${format(row[metric])}</td>`).join("");
+  elements.details.innerHTML = details.length ? groups.map(group => {
+    const header = dimension ? `<tr class="group-header"><td colspan="${columnCount}">${escapeHtml(dimensionLabel)}: ${escapeHtml(group.label)}</td></tr>` : "";
+    const body = group.rows.map(row =>
+      `<tr class="detail-row">${DIMENSIONS.map(([key]) => `<td>${escapeHtml(row[key])}</td>`).join("")}${metricCells(row)}</tr>`
+    ).join("");
+    const total = sumRows(group.rows);
+    const totalLabel = dimension ? `Summe ${escapeHtml(group.label)}` : "Gesamtsumme";
+    const footer = `<tr class="group-total"><td colspan="${DIMENSIONS.length}">${totalLabel}</td>${metricCells(total)}</tr>`;
+    return header + body + footer;
+  }).join("") : `<tr><td colspan="${columnCount}" class="empty">Keine Daten.</td></tr>`;
 }
 
 async function loadReport() {
@@ -164,7 +189,7 @@ async function loadReport() {
 
 elements.load.addEventListener("click", loadReport);
 elements.actor.addEventListener("change", render);
-groupByInputs.forEach(input => input.addEventListener("change", render));
+groupBySelect.addEventListener("change", render);
 elements.creditPrice.addEventListener("input", render);
 elements.dateGranularity.addEventListener("change", render);
 loadReport();
