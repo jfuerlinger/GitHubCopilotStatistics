@@ -25,13 +25,24 @@
       <label>Von<input id="from" type="month"></label>
       <label>Bis<input id="to" type="month"></label>
       <label>Person<select id="actor"><option value="all">Alle Personen</option></select></label>
+      <label>Preis je AI Credit (€)<input id="credit-price" type="number" min="0" step="0.001" value="0.04"></label>
+      <fieldset class="group-by">
+        <legend>Gruppieren nach</legend>
+        <label><input type="checkbox" class="group-by-option" value="date" checked>Datum</label>
+        <label><input type="checkbox" class="group-by-option" value="actor" checked>Person</label>
+        <label><input type="checkbox" class="group-by-option" value="model" checked>Modell</label>
+      </fieldset>
+      <label>Datums-Granularität<select id="date-granularity">
+        <option value="day">Tag</option>
+        <option value="month" selected>Monat</option>
+      </select></label>
       <button id="load" type="button">Auswerten</button>
     </section>
 
     <section id="summary" class="cards" aria-label="Zusammenfassung"></section>
 
     <section class="panel" aria-labelledby="chart-title">
-      <div class="panel-heading"><div><span class="eyebrow">Trend</span><h2 id="chart-title">AI Credits pro Monat</h2></div></div>
+      <div class="panel-heading"><div><span class="eyebrow">Trend</span><h2 id="chart-title">AI Credits pro Zeitraum</h2></div></div>
       <div id="chart" class="chart"><p class="empty">Zeitraum auswählen.</p></div>
     </section>
 
@@ -44,8 +55,8 @@
       <div class="panel-heading"><div><span class="eyebrow">Repository</span><h2 id="repo-breakdown-title">AI Credits pro Monat und Repo</h2></div></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Monat</th><th>Repository</th><th class="number">AI Credits</th></tr></thead>
-          <tbody id="repo-breakdown"><tr><td colspan="3" class="empty">Noch keine Daten geladen.</td></tr></tbody>
+          <thead><tr><th>Monat</th><th>Repository</th><th class="number">AI Credits</th><th class="number">Kosten (€)</th></tr></thead>
+          <tbody id="repo-breakdown"><tr><td colspan="4" class="empty">Noch keine Daten geladen.</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -54,8 +65,8 @@
       <div class="panel-heading"><div><span class="eyebrow">Details</span><h2 id="details-title">Verbrauch nach Person und Modell</h2></div></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Monat</th><th>Person</th><th>Modell</th><th class="number">Sessions</th><th class="number">Input</th><th class="number">Output</th><th class="number">Cache</th><th class="number">Reasoning</th><th class="number">AI Credits</th></tr></thead>
-          <tbody id="details"><tr><td colspan="9" class="empty">Noch keine Daten geladen.</td></tr></tbody>
+          <thead><tr id="details-head"></tr></thead>
+          <tbody id="details"><tr><td class="empty">Noch keine Daten geladen.</td></tr></tbody>
         </table>
       </div>
     </section>

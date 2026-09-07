@@ -209,7 +209,7 @@ endpoint is accessible anonymously, and it is additionally protected by
 |---|---|---|
 | `POST` | `/api/usage` | Validate the payload and store or update the session |
 | `GET` | `/api/repositories` | List known repositories |
-| `GET` | `/api/reports/monthly?from=2026-01&to=2026-12` | Return cross-repository monthly values by person and model, plus AI credits per month and repository (`repository` is optional) |
+| `GET` | `/api/reports/monthly?from=2026-01&to=2026-12` | Return cross-repository values per day (`date`, plus its `month`), person and model, along with AI credits per month and repository (`repository` is optional) |
 
 ### Local development
 

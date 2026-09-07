@@ -4,6 +4,10 @@ elements.repoBreakdown = document.getElementById("repo-breakdown");
 elements.themeToggle = document.getElementById("theme-toggle");
 elements.themeIcon = document.getElementById("theme-icon");
 elements.themeLabel = document.getElementById("theme-label");
+elements.detailsHead = document.getElementById("details-head");
+elements.creditPrice = document.getElementById("credit-price");
+elements.dateGranularity = document.getElementById("date-granularity");
+const groupByInputs = [...document.querySelectorAll(".group-by-option")];
 
 const THEME_KEY = "copilot-usage-theme";
 function applyTheme(theme) {
@@ -26,6 +30,7 @@ initTheme();
 
 const number = new Intl.NumberFormat("de-DE");
 const decimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 const currentMonth = new Date().toISOString().slice(0, 7);
 elements.from.value = `${new Date().getUTCFullYear()}-01`;
 elements.to.value = currentMonth;
@@ -51,6 +56,62 @@ function filteredRows() {
   return elements.actor.value === "all" ? rows : rows.filter(row => row.actor === elements.actor.value);
 }
 
+const DIMENSIONS = [["date","Datum"],["actor","Person"],["model","Modell"]];
+const METRICS = [
+  ["sessions","Sessions", value => number.format(value)],
+  ["inputTokens","Input", value => number.format(value)],
+  ["outputTokens","Output", value => number.format(value)],
+  ["cacheTokens","Cache", value => number.format(value)],
+  ["reasoningTokens","Reasoning", value => number.format(value)],
+  ["githubAiCredits","AI Credits", value => decimal.format(value)],
+  ["costEur","Kosten (€)", value => euro.format(value)]
+];
+
+function creditPrice() {
+  const value = Number(elements.creditPrice.value);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function activeDimensions() {
+  return groupByInputs.filter(input => input.checked).map(input => input.value);
+}
+
+function dateGranularity() {
+  return elements.dateGranularity.value === "day" ? "day" : "month";
+}
+
+function dateValue(row) {
+  const date = row.date || row.month || "";
+  return dateGranularity() === "day" ? date : date.slice(0, 7);
+}
+
+function normalize(row) {
+  return {
+    date: dateValue(row), month: row.month, actor: row.actor, model: row.model,
+    sessions: row.sessions || 0, inputTokens: row.inputTokens || 0, outputTokens: row.outputTokens || 0,
+    cacheTokens: (row.cacheReadTokens || 0) + (row.cacheWriteTokens || 0),
+    reasoningTokens: row.reasoningTokens || 0, githubAiCredits: row.githubAiCredits || 0,
+    costEur: (row.githubAiCredits || 0) * creditPrice()
+  };
+}
+
+function groupRows(source) {
+  const dimensions = activeDimensions();
+  const groups = new Map();
+  source.map(normalize).forEach(row => {
+    const key = dimensions.map(dimension => row[dimension]).join("\u0000");
+    let group = groups.get(key);
+    if (!group) {
+      group = { date: "Alle", actor: "Alle", model: "Alle" };
+      METRICS.forEach(([metric]) => { group[metric] = 0; });
+      dimensions.forEach(dimension => { group[dimension] = row[dimension]; });
+      groups.set(key, group);
+    }
+    METRICS.forEach(([metric]) => { group[metric] += row[metric]; });
+  });
+  return [...groups.values()].sort((a, b) => `${a.date}${a.actor}${a.model}`.localeCompare(`${b.date}${b.actor}${b.model}`));
+}
+
 function render() {
   const visible = filteredRows();
   const totals = visible.reduce((sum, row) => ({
@@ -59,11 +120,12 @@ function render() {
   }), { sessions:0, input:0, output:0, credits:0 });
   elements.summary.innerHTML = [
     ["Session-Modell-Nutzungen", number.format(totals.sessions)], ["Input Tokens", number.format(totals.input)],
-    ["Output Tokens", number.format(totals.output)], ["GitHub AI Credits", decimal.format(totals.credits)]
+    ["Output Tokens", number.format(totals.output)], ["GitHub AI Credits", decimal.format(totals.credits)],
+    ["Kosten", euro.format(totals.credits * creditPrice())]
   ].map(([label,value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 
   const months = new Map();
-  visible.forEach(row => months.set(row.month, (months.get(row.month) || 0) + row.githubAiCredits));
+  visible.forEach(row => { const key = dateValue(row); months.set(key, (months.get(key) || 0) + row.githubAiCredits); });
   const max = Math.max(...months.values(), 0.01);
   elements.chart.innerHTML = months.size ? [...months].sort().map(([month,total]) => `<div class="bar-group"><span class="bar-value">${decimal.format(total)}</span><div class="bar-track"><div class="bar credits" style="height:${Math.max(2,total/max*100)}%"></div></div><span class="bar-label">${month}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
 
@@ -72,9 +134,16 @@ function render() {
   const maxCredits = Math.max(...credits.values(), 0.01);
   elements.creditsChart.innerHTML = credits.size ? [...credits].sort((a,b) => b[1] - a[1]).map(([actor,total]) => `<div class="bar-group"><span class="bar-value">${decimal.format(total)}</span><div class="bar-track"><div class="bar credits" style="height:${Math.max(2,total/maxCredits*100)}%"></div></div><span class="bar-label">${escapeHtml(actor)}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
 
-  elements.repoBreakdown.innerHTML = repoBreakdown.length ? repoBreakdown.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.repository)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td></tr>`).join("") : '<tr><td colspan="3" class="empty">Keine Daten.</td></tr>';
+  elements.repoBreakdown.innerHTML = repoBreakdown.length ? repoBreakdown.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.repository)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td><td class="number">${euro.format(row.githubAiCredits * creditPrice())}</td></tr>`).join("") : '<tr><td colspan="4" class="empty">Keine Daten.</td></tr>';
 
-  elements.details.innerHTML = visible.length ? visible.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.actor)}</td><td>${escapeHtml(row.model)}</td><td class="number">${number.format(row.sessions)}</td><td class="number">${number.format(row.inputTokens)}</td><td class="number">${number.format(row.outputTokens)}</td><td class="number">${number.format(row.cacheReadTokens + row.cacheWriteTokens)}</td><td class="number">${number.format(row.reasoningTokens)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td></tr>`).join("") : '<tr><td colspan="9" class="empty">Keine Daten.</td></tr>';
+  const dimensions = activeDimensions();
+  const shownDimensions = dimensions.length ? DIMENSIONS.filter(([key]) => dimensions.includes(key)) : DIMENSIONS;
+  const grouped = groupRows(visible);
+  elements.detailsHead.innerHTML = shownDimensions.map(([, label]) => `<th>${label}</th>`).join("") + METRICS.map(([, label]) => `<th class="number">${label}</th>`).join("");
+  const columnCount = shownDimensions.length + METRICS.length;
+  elements.details.innerHTML = grouped.length ? grouped.map(row =>
+    `<tr>${shownDimensions.map(([key]) => `<td>${escapeHtml(row[key])}</td>`).join("")}${METRICS.map(([metric,, format]) => `<td class="number">${format(row[metric])}</td>`).join("")}</tr>`
+  ).join("") : `<tr><td colspan="${columnCount}" class="empty">Keine Daten.</td></tr>`;
 }
 
 async function loadReport() {
@@ -95,4 +164,7 @@ async function loadReport() {
 
 elements.load.addEventListener("click", loadReport);
 elements.actor.addEventListener("change", render);
+groupByInputs.forEach(input => input.addEventListener("change", render));
+elements.creditPrice.addEventListener("input", render);
+elements.dateGranularity.addEventListener("change", render);
 loadReport();
