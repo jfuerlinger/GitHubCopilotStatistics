@@ -13,11 +13,11 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  deploy-static-web-app:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build and deploy
+      - name: Build and deploy Static Web App
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
@@ -28,3 +28,29 @@ jobs:
           output_location: ""
           skip_app_build: true
           api_build_command: npm run build
+
+  deploy-function-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Build Function App
+        working-directory: api
+        run: |
+          npm ci
+          npm run build
+          npm prune --omit=dev
+
+      - name: Deploy Function App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: app-gcstatistics-poc
+          package: api
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}

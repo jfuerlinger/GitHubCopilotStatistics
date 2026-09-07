@@ -77,8 +77,7 @@ standard-library SQLite client. If that store has not been updated by the time
 the hook fires, the script falls back to the session event log and sends the
 available output-token counts with `"source": "events-jsonl-output-only"`.
 
-Set `COPILOT_USAGE_WEBHOOK_URL` before starting Copilot CLI to override the
-target for development or testing.
+Der Hook verwendet standardmäßig `https://app-gcstatistics-poc.azurewebsites.net/api/usage` und ergänzt den Key aus `COPILOT_USAGE_INGESTION_KEY`. Setze diese Variable vor dem Start von Copilot CLI. `COPILOT_USAGE_WEBHOOK_URL` kann weiterhin für Entwicklung oder Tests überschrieben werden.
 
 ## Azure-Lösung
 
@@ -114,25 +113,31 @@ Ein `actor`-Feld oder Header ist vorzuziehen, weil Geheimnisse in URLs in Logs a
 
 Voraussetzungen: Azure CLI mit Bicep-Unterstützung, eine Azure Subscription und ein GitHub-Repository.
 
+Die Ressourcennamen sind in `infra/main.bicepparam` und die Resource Group in `infra/deploy.ps1` vorbelegt. Daher genügt:
+
 ```powershell
 az login
-$secret = Read-Host 'Ingestion key' -AsSecureString
-.\infra\deploy.ps1 `
-  -ResourceGroup copilot-usage-rg `
-  -StaticWebAppName copilot-usage-<eindeutiger-suffix> `
-  -StorageAccountName copilotusage<eindeutigersuffix> `
-  -FunctionAppName copilot-usage-api-<eindeutiger-suffix> `
-  -IngestionKey $secret
+.\infra\deploy.ps1
 ```
 
-`deploy.ps1` gibt Hostname und Webhook-Basis-URL aus. Danach das Deployment-Token abrufen und im GitHub-Repository als Secret `AZURE_STATIC_WEB_APPS_API_TOKEN` hinterlegen:
+Nur der Ingestion Key wird sicher abgefragt. Optional kann er für automatisierte Deployments über `COPILOT_USAGE_INGESTION_KEY` oder mit `-IngestionKey` übergeben werden; er wird nicht in der Parameterdatei gespeichert.
+
+`deploy.ps1` gibt Hostname und Webhook-Basis-URL aus. Danach die Deployment-Zugangsdaten im GitHub-Repository hinterlegen:
 
 ```powershell
-az staticwebapp secrets list --name copilot-usage-<eindeutiger-suffix> --query properties.apiKey -o tsv
+az staticwebapp secrets list --name stapp-githubcopilotstatistics-poc --query properties.apiKey -o tsv
 ```
 
-Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` den Ordner `web` und die verwalteten Functions aus `api`. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
+Das Ergebnis als Secret `AZURE_STATIC_WEB_APPS_API_TOKEN` speichern. Zusätzlich das Publish Profile der eigenständigen Function App abrufen und dessen vollständige XML-Ausgabe als Secret `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` speichern:
 
+```powershell
+az functionapp deployment list-publishing-profiles `
+  --name app-gcstatistics-poc `
+  --resource-group rg-githubcopilotstatistics-poc `
+  --xml
+```
+
+Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` sowohl den Ordner `web` und die verwalteten Functions als auch die kompilierte eigenständige Azure Function App `app-gcstatistics-poc`. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
 ### API
 
 | Methode | Route | Zweck |

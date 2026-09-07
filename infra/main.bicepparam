@@ -1,7 +1,7 @@
 using './main.bicep'
 
-param staticWebAppName = 'copilot-usage-YOUR-SUFFIX'
-param storageAccountName = 'copilotusageYOURSUFFIX'
-param functionAppName = 'copilot-usage-api-YOUR-SUFFIX'
-// Pass securely on the command line or use infra/deploy.ps1; do not commit the real key.
+param staticWebAppName = 'stapp-githubcopilotstatistics-poc'
+param storageAccountName = 'stagcstatisticspoc'
+param functionAppName = 'app-gcstatistics-poc'
+// Wird von infra/deploy.ps1 sicher zur Laufzeit überschrieben.
 param ingestionKey = '<replace-at-deployment>'

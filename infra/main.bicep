@@ -143,7 +143,16 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
-resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {  name: staticWebAppName
+resource functionAppScmPublishing 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2022-03-01' = {
+  parent: functionApp
+  name: 'scm'
+  properties: {
+    allow: true
+  }
+}
+
+resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
+  name: staticWebAppName
   location: staticWebAppLocation
   sku: { name: 'Free', tier: 'Free' }
   properties: {}
