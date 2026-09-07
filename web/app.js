@@ -1,4 +1,27 @@
 const elements = Object.fromEntries(["status","repository","from","to","actor","load","summary","chart","details"].map(id => [id, document.getElementById(id)]));
+elements.themeToggle = document.getElementById("theme-toggle");
+elements.themeIcon = document.getElementById("theme-icon");
+elements.themeLabel = document.getElementById("theme-label");
+
+const THEME_KEY = "copilot-usage-theme";
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  elements.themeToggle.setAttribute("aria-pressed", String(theme === "light"));
+  elements.themeIcon.textContent = theme === "light" ? "☀️" : "🌙";
+  elements.themeLabel.textContent = theme === "light" ? "Hell" : "Dark";
+}
+function initTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  const preferred = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  applyTheme(preferred);
+}
+elements.themeToggle.addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+initTheme();
+
 const number = new Intl.NumberFormat("de-DE");
 const decimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
 const currentMonth = new Date().toISOString().slice(0, 7);

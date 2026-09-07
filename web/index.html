@@ -11,7 +11,13 @@
 <body>
   <header>
     <div><span class="eyebrow">GitHub Copilot CLI</span><h1>Usage Dashboard</h1></div>
-    <span id="status" class="status">Wird geladen …</span>
+    <div class="header-actions">
+      <button id="theme-toggle" type="button" class="theme-toggle" aria-pressed="false" title="Hell-/Dunkelmodus wechseln">
+        <span id="theme-icon" aria-hidden="true">🌙</span>
+        <span id="theme-label">Dark</span>
+      </button>
+      <span id="status" class="status">Wird geladen …</span>
+    </div>
   </header>
   <main>
     <section class="filters" aria-labelledby="filter-title">
