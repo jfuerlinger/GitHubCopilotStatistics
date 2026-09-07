@@ -2,7 +2,7 @@
 
 ## Build, test, and run commands
 
-The maintained application is the Node.js 20/TypeScript Azure Functions project in `api` plus the static frontend in `web`.
+The maintained application is the Node.js 22/TypeScript Azure Functions project in `api` plus the static frontend in `web`.
 
 Run these commands from `api`:
 

@@ -100,7 +100,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       minTlsVersion: '1.2'
       ftpsState: 'FtpsOnly'
-      nodeVersion: '~20'
+      nodeVersion: '~22'
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
@@ -124,7 +124,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         }
         {
           name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~20'
+          value: '~22'
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
