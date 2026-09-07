@@ -1,4 +1,5 @@
 const elements = Object.fromEntries(["status","repository","from","to","actor","load","summary","chart","details"].map(id => [id, document.getElementById(id)]));
+elements.creditsChart = document.getElementById("credits-chart");
 elements.themeToggle = document.getElementById("theme-toggle");
 elements.themeIcon = document.getElementById("theme-icon");
 elements.themeLabel = document.getElementById("theme-label");
@@ -72,6 +73,11 @@ function render() {
   visible.forEach(row => months.set(row.month, (months.get(row.month) || 0) + row.inputTokens + row.outputTokens));
   const max = Math.max(...months.values(), 1);
   elements.chart.innerHTML = months.size ? [...months].sort().map(([month,total]) => `<div class="bar-group"><span class="bar-value">${number.format(total)}</span><div class="bar-track"><div class="bar" style="height:${Math.max(2,total/max*100)}%"></div></div><span class="bar-label">${month}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
+
+  const credits = new Map();
+  visible.forEach(row => credits.set(row.actor, (credits.get(row.actor) || 0) + row.githubAiCredits));
+  const maxCredits = Math.max(...credits.values(), 0.01);
+  elements.creditsChart.innerHTML = credits.size ? [...credits].sort((a,b) => b[1] - a[1]).map(([actor,total]) => `<div class="bar-group"><span class="bar-value">${decimal.format(total)}</span><div class="bar-track"><div class="bar credits" style="height:${Math.max(2,total/maxCredits*100)}%"></div></div><span class="bar-label">${escapeHtml(actor)}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
 
   elements.details.innerHTML = visible.length ? visible.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.actor)}</td><td>${escapeHtml(row.model)}</td><td class="number">${number.format(row.sessions)}</td><td class="number">${number.format(row.inputTokens)}</td><td class="number">${number.format(row.outputTokens)}</td><td class="number">${number.format(row.cacheReadTokens + row.cacheWriteTokens)}</td><td class="number">${number.format(row.reasoningTokens)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td></tr>`).join("") : '<tr><td colspan="9" class="empty">Keine Daten.</td></tr>';
 }
