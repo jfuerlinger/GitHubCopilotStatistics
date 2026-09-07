@@ -225,17 +225,19 @@ endpoint is accessible anonymously, and it is additionally protected by
 
 ### Local development
 
-Azurite and Azure Functions Core Tools must be installed locally. Copy the
-example file, set `INGESTION_KEY`, and then start the application:
+Prerequisites are Node.js 22 or later, Azurite, and Azure Functions Core Tools.
+Copy the example settings, replace `INGESTION_KEY` with a local shared secret,
+and then install, test, and start the API:
 
 ```powershell
 Copy-Item api\local.settings.example.json api\local.settings.json
 Set-Location api
-npm install
+npm ci
 npm test
 npm start
 ```
 
-The static frontend can be run with the Static Web Apps CLI alongside the local
-Function. The core is dependency-light; besides the official Azure Functions
-SDK, it uses only the official Table Storage client.
+The Functions host exposes the API locally at `http://localhost:7071/api`.
+Start the static frontend with the Static Web Apps CLI to proxy its relative API
+requests to the local Functions host. The core is dependency-light: besides the
+official Azure Functions SDK, it uses only the official Table Storage client.
