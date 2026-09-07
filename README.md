@@ -79,3 +79,78 @@ available output-token counts with `"source": "events-jsonl-output-only"`.
 
 Set `COPILOT_USAGE_WEBHOOK_URL` before starting Copilot CLI to override the
 target for development or testing.
+
+## Azure-Lösung
+
+Die Anwendung besteht aus:
+
+- **Azure Static Web Apps (Free):** geschütztes Dashboard und verwaltete Azure Functions.
+- **Azure Function App (Consumption Plan, Y1):** optionaler eigenständiger Endpunkt für den Usage-Webhook inkl. Application Insights.
+- **Azure Table Storage:** zwei sehr günstige Tabellen für Sessions und den Repository-Katalog.
+- **TypeScript Azure Functions:** validieren Webhooks, speichern Sessions idempotent und aggregieren Monatswerte.
+
+Jede Kombination aus Session und Modell wird mit einem stabilen Schlüssel gespeichert. Sendet der Hook während derselben Session erneut kumulierte Werte, wird der vorhandene Datensatz ersetzt statt doppelt gezählt. Eine Session wird dem Monat ihres zuletzt empfangenen `captured_at` zugeordnet.
+
+Table Storage hat keinen dauerhaft garantierten Gratis-Tarif, verursacht bei diesem kleinen Datenvolumen aber üblicherweise nur minimale Kosten für Speicher und Transaktionen. Static Web Apps Free und die enthaltenen verwalteten Functions haben Nutzungslimits; aktuelle Preise und Limits stehen in der Azure-Preisliste.
+
+### Benutzerzuordnung
+
+Der Beispiel-Payload enthält keine Benutzeridentität. Die Function bestimmt `actor` in dieser Reihenfolge:
+
+1. `actor` im JSON (String oder Objekt mit `login`, `name` oder `id`)
+2. Query-Parameter `actor`
+3. Header `x-copilot-actor`
+4. `unknown`
+
+Für den unveränderten Gist-Sender kann pro Arbeitsplatz beispielsweise folgende URL gesetzt werden:
+
+```text
+COPILOT_USAGE_WEBHOOK_URL=https://<app>.azurestaticapps.net/api/usage?actor=joe&key=<ingestion-key>
+```
+
+Ein `actor`-Feld oder Header ist vorzuziehen, weil Geheimnisse in URLs in Logs auftauchen können. Nach Änderung der Umgebungsvariable Copilot CLI neu starten.
+
+### Bereitstellen
+
+Voraussetzungen: Azure CLI mit Bicep-Unterstützung, eine Azure Subscription und ein GitHub-Repository.
+
+```powershell
+az login
+$secret = Read-Host 'Ingestion key' -AsSecureString
+.\infra\deploy.ps1 `
+  -ResourceGroup copilot-usage-rg `
+  -StaticWebAppName copilot-usage-<eindeutiger-suffix> `
+  -StorageAccountName copilotusage<eindeutigersuffix> `
+  -FunctionAppName copilot-usage-api-<eindeutiger-suffix> `
+  -IngestionKey $secret
+```
+
+`deploy.ps1` gibt Hostname und Webhook-Basis-URL aus. Danach das Deployment-Token abrufen und im GitHub-Repository als Secret `AZURE_STATIC_WEB_APPS_API_TOKEN` hinterlegen:
+
+```powershell
+az staticwebapp secrets list --name copilot-usage-<eindeutiger-suffix> --query properties.apiKey -o tsv
+```
+
+Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` den Ordner `web` und die verwalteten Functions aus `api`. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
+
+### API
+
+| Methode | Route | Zweck |
+|---|---|---|
+| `POST` | `/api/usage` | Payload validieren und Session speichern/aktualisieren |
+| `GET` | `/api/repositories` | bekannte Repositories auflisten |
+| `GET` | `/api/reports/monthly?repository=…&from=2026-01&to=2026-12` | monatliche Werte nach Person und Modell |
+
+### Lokal entwickeln
+
+Azurite und Azure Functions Core Tools müssen lokal vorhanden sein. Die Beispieldatei kopieren, `INGESTION_KEY` setzen und dann starten:
+
+```powershell
+Copy-Item api\local.settings.example.json api\local.settings.json
+Set-Location api
+npm install
+npm test
+npm start
+```
+
+Das statische Frontend kann mit der Static Web Apps CLI zusammen mit der lokalen Function ausgeführt werden. Der Kern ist dependency-light; neben dem offiziellen Azure Functions SDK wird nur der offizielle Table-Storage-Client verwendet.

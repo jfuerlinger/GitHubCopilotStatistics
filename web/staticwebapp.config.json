@@ -1,0 +1,18 @@
+{
+  "routes": [
+    { "route": "/api/usage", "methods": ["POST"], "allowedRoles": ["anonymous"] },
+    { "route": "/api/*", "allowedRoles": ["authenticated"] },
+    { "route": "/*", "allowedRoles": ["authenticated"] }
+  ],
+  "responseOverrides": {
+    "401": { "statusCode": 302, "redirect": "/.auth/login/github?post_login_redirect_uri=/" }
+  },
+  "navigationFallback": { "rewrite": "/index.html", "exclude": ["/api/*", "/*.{css,js,json,ico,png,svg}"] },
+  "globalHeaders": {
+    "content-security-policy": "default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY"
+  },
+  "mimeTypes": { ".json": "application/json" }
+}

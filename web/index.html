@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Monatliche GitHub Copilot CLI Nutzungsstatistik">
+  <title>Copilot Usage</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <header>
+    <div><span class="eyebrow">GitHub Copilot CLI</span><h1>Usage Dashboard</h1></div>
+    <span id="status" class="status">Wird geladen …</span>
+  </header>
+  <main>
+    <section class="filters" aria-labelledby="filter-title">
+      <h2 id="filter-title">Auswertung</h2>
+      <label>Repository<select id="repository"><option value="">Repository wählen</option></select></label>
+      <label>Von<input id="from" type="month"></label>
+      <label>Bis<input id="to" type="month"></label>
+      <label>Person<select id="actor"><option value="all">Alle Personen</option></select></label>
+      <button id="load" type="button">Auswerten</button>
+    </section>
+
+    <section id="summary" class="cards" aria-label="Zusammenfassung"></section>
+
+    <section class="panel" aria-labelledby="chart-title">
+      <div class="panel-heading"><div><span class="eyebrow">Trend</span><h2 id="chart-title">Tokens pro Monat</h2></div></div>
+      <div id="chart" class="chart"><p class="empty">Repository und Zeitraum auswählen.</p></div>
+    </section>
+
+    <section class="panel" aria-labelledby="details-title">
+      <div class="panel-heading"><div><span class="eyebrow">Details</span><h2 id="details-title">Verbrauch nach Person und Modell</h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Monat</th><th>Person</th><th>Modell</th><th class="number">Sessions</th><th class="number">Input</th><th class="number">Output</th><th class="number">Cache</th><th class="number">Reasoning</th><th class="number">AI Credits</th></tr></thead>
+          <tbody id="details"><tr><td colspan="9" class="empty">Noch keine Daten geladen.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <footer>Gespeichert in Azure Table Storage · Sessions werden idempotent aktualisiert</footer>
+</body>
+</html>
