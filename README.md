@@ -19,7 +19,7 @@ be overridden with `COPILOT_USAGE_WEBHOOK_URL`. The payload contains:
 
 The endpoint requires the shared ingestion key. Set
 `COPILOT_USAGE_INGESTION_KEY` before starting Copilot CLI; the hook appends it
-as the URL-encoded `key` query parameter (see "Azure-Lösung" below for the
+as the URL-encoded `key` query parameter (see "Azure solution" below for the
 alternative header-based option and both endpoint variants).
 
 > **Note:** Restart Copilot CLI after cloning this repository or after
@@ -86,89 +86,104 @@ standard-library SQLite client. If that store has not been updated by the time
 the hook fires, the script falls back to the session event log and sends the
 available output-token counts with `"source": "events-jsonl-output-only"`.
 
-## Azure-Lösung
+## Azure solution
 
-Die Anwendung besteht aus:
+The application consists of:
 
-- **Azure Static Web Apps (Free):** geschütztes Dashboard sowie eine verwaltete
-  Kopie der Functions für Dashboard- und API-Zugriffe.
-- **Azure Function App (Consumption Plan, Y1):** standardmäßig vom Hook
-  verwendeter, eigenständiger Ingestion-Endpunkt inklusive Application Insights
-  und Log-Analytics-Workspace.
-- **Azure Table Storage:** die Tabellen `CopilotUsage` für Session-/Modellwerte
-  und `CopilotRepositories` für den Repository-Katalog.
-- **TypeScript Azure Functions:** validieren Webhooks, speichern Sessions
-  idempotent und aggregieren Monatswerte.
+- **Azure Static Web Apps (Free):** A protected dashboard and a managed copy of
+  the Functions for dashboard and API access.
+- **Azure Function App (Consumption plan, Y1):** A standalone ingestion endpoint
+  used by the hook by default, including Application Insights and a Log
+  Analytics workspace.
+- **Azure Table Storage:** The `CopilotUsage` table for session/model values and
+  the `CopilotRepositories` table for the repository catalog.
+- **TypeScript Azure Functions:** Validate webhooks, store sessions
+  idempotently, and aggregate monthly values.
 
-Sowohl die verwalteten Functions der Static Web App als auch die eigenständige
-Function App verwenden denselben Quellcode aus `api`, denselben Ingestion Key
-und dieselben Storage-Tabellen. Dadurch stehen zwei mögliche Endpunkte bereit:
+Both the Static Web App's managed Functions and the standalone Function App use
+the same source code from `api`, the same ingestion key, and the same storage
+tables. This provides two possible endpoints:
 
-| Variante | URL | Verwendung |
+| Variant | URL | Usage |
 |---|---|---|
-| Eigenständige Function App | `https://<function-app>.azurewebsites.net/api/usage` | Standardziel des Hooks; separates Monitoring über Application Insights |
-| Static Web App | `https://<static-web-app>.azurestaticapps.net/api/usage` | Alternative, wenn Ingestion und Dashboard über denselben Host laufen sollen |
+| Standalone Function App | `https://<function-app>.azurewebsites.net/api/usage` | Default hook target; separate monitoring through Application Insights |
+| Static Web App | `https://<static-web-app>.azurestaticapps.net/api/usage` | Alternative when ingestion and the dashboard should use the same host |
 
-Für beide Endpunkte kann der Schlüssel als Query-Parameter `key` oder im Header
-`x-ingestion-key` gesendet werden. Der Hook verwendet standardmäßig
-`COPILOT_USAGE_INGESTION_KEY` als Query-Parameter. Für Entwicklung, Tests oder
-die Static-Web-App-Variante lässt sich die vollständige Ziel-URL über
-`COPILOT_USAGE_WEBHOOK_URL` überschreiben.
+For both endpoints, the key can be sent as the `key` query parameter or in the
+`x-ingestion-key` header. By default, the hook sends
+`COPILOT_USAGE_INGESTION_KEY` as a query parameter. For development, testing,
+or the Static Web App variant, the complete destination URL can be overridden
+with `COPILOT_USAGE_WEBHOOK_URL`.
 
-Jede Kombination aus Session und Modell wird mit einem stabilen Schlüssel gespeichert. Sendet der Hook während derselben Session erneut kumulierte Werte, wird der vorhandene Datensatz ersetzt statt doppelt gezählt. Eine Session wird dem Monat ihres zuletzt empfangenen `captured_at` zugeordnet.
+Each session/model combination is stored with a stable key. If the hook sends
+updated cumulative values during the same session, the existing record is
+replaced instead of counted twice. A session is assigned to the month of its
+most recently received `captured_at` value.
 
-Table Storage hat keinen dauerhaft garantierten Gratis-Tarif, verursacht bei diesem kleinen Datenvolumen aber üblicherweise nur minimale Kosten für Speicher und Transaktionen. Static Web Apps Free und die enthaltenen verwalteten Functions haben Nutzungslimits; aktuelle Preise und Limits stehen in der Azure-Preisliste.
+Table Storage does not have a permanently guaranteed free tier, but at this
+small data volume it usually incurs only minimal storage and transaction costs.
+Static Web Apps Free and its included managed Functions have usage limits; see
+the Azure pricing documentation for current prices and limits.
 
-### Benutzerzuordnung
+### User attribution
 
-Der Gist-Sender ermittelt den Actor automatisch und setzt ihn als `actor`-Feld
-im Payload. Die Function bestimmt `actor` in dieser Reihenfolge:
+The Gist sender automatically determines the actor and includes it in the
+payload's `actor` field. The Function determines `actor` in this order:
 
-1. `actor` im JSON (String oder Objekt mit `login`, `name` oder `id`) — der
-   Gist-Sender füllt dies automatisch, in dieser Reihenfolge:
-   `COPILOT_USAGE_ACTOR`-Umgebungsvariable → `GITHUB_ACTOR` (z. B. in GitHub
-   Actions gesetzt) → lokaler `git config user.name` → `git config user.email`.
-2. Query-Parameter `actor`
-3. Header `x-copilot-actor`
-4. `unknown` (falls nichts davon verfügbar ist, z. B. ohne lokale Git-Identität)
+1. `actor` in the JSON (a string or an object with `login`, `name`, or `id`) —
+   the Gist sender populates it automatically using this precedence:
+   `COPILOT_USAGE_ACTOR` environment variable → `GITHUB_ACTOR` (for example,
+   when set in GitHub Actions) → local `git config user.name` →
+   `git config user.email`.
+2. The `actor` query parameter.
+3. The `x-copilot-actor` header.
+4. `unknown` if none of the above is available, for example when there is no
+   local Git identity.
 
-Um den Actor manuell zu überschreiben, z. B. für einen abweichenden Anzeigenamen,
-genügt es, `COPILOT_USAGE_ACTOR` vor dem Start von Copilot CLI zu setzen:
+To override the actor manually, for example to use a different display name,
+set `COPILOT_USAGE_ACTOR` before starting Copilot CLI:
 
 ```powershell
 $env:COPILOT_USAGE_ACTOR = "joe"
 ```
 
-Alternativ lässt sich der Actor auch über die Ziel-URL erzwingen (Query-Parameter
-oder Header sind gegenüber dem in der URL sichtbaren Query-Parameter vorzuziehen,
-weil Geheimnisse in URLs in Logs auftauchen können):
+Alternatively, the actor can be forced through the destination URL. Headers
+are preferable for secrets because query parameters may appear in logs:
 
 ```text
 COPILOT_USAGE_WEBHOOK_URL=https://<app>.azurestaticapps.net/api/usage?actor=joe&key=<ingestion-key>
 ```
 
-(siehe Neustart-Hinweis oben, nachdem eine dieser Umgebungsvariablen geändert wurde).
+See the restart note above after changing any of these environment variables.
 
-### Bereitstellen
+### Deployment
 
-Voraussetzungen: Azure CLI mit Bicep-Unterstützung, eine Azure Subscription und ein GitHub-Repository.
+Prerequisites: Azure CLI with Bicep support, an Azure subscription, and a
+GitHub repository.
 
-Die Ressourcennamen sind in `infra/main.bicepparam` und die Resource Group in `infra/deploy.ps1` vorbelegt. Daher genügt:
+Resource names are predefined in `infra/main.bicepparam`, and the resource
+group is predefined in `infra/deploy.ps1`. Therefore, the following is
+sufficient:
 
 ```powershell
 az login
 .\infra\deploy.ps1
 ```
 
-Nur der Ingestion Key wird sicher abgefragt. Optional kann er für automatisierte Deployments über `COPILOT_USAGE_INGESTION_KEY` oder mit `-IngestionKey` übergeben werden; er wird nicht in der Parameterdatei gespeichert.
+Only the ingestion key is requested securely. For automated deployments, it
+can optionally be supplied through `COPILOT_USAGE_INGESTION_KEY` or the
+`-IngestionKey` parameter; it is not stored in the parameter file.
 
-`deploy.ps1` gibt Hostname und Webhook-Basis-URL aus. Danach die Deployment-Zugangsdaten im GitHub-Repository hinterlegen:
+`deploy.ps1` outputs the hostname and webhook base URL. Then add the deployment
+credentials to the GitHub repository:
 
 ```powershell
 az staticwebapp secrets list --name stapp-githubcopilotstatistics-poc --query properties.apiKey -o tsv
 ```
 
-Das Ergebnis als Secret `AZURE_STATIC_WEB_APPS_API_TOKEN` speichern. Zusätzlich das Publish Profile der eigenständigen Function App abrufen und dessen vollständige XML-Ausgabe als Secret `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` speichern:
+Store the result as the `AZURE_STATIC_WEB_APPS_API_TOKEN` secret. In addition,
+retrieve the publish profile for the standalone Function App and store its
+complete XML output as the `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` secret:
 
 ```powershell
 az functionapp deployment list-publishing-profiles `
@@ -177,19 +192,29 @@ az functionapp deployment list-publishing-profiles `
   --xml
 ```
 
-Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei einem Push auf `main` sowohl den Ordner `web` und die verwalteten Functions als auch die kompilierte eigenständige Azure Function App `app-gcstatistics-poc`. Beide Deployments laufen nur, wenn sich die jeweiligen Quellen geändert haben: Die eigenständige Function App wird bei Änderungen unter `api/**` ausgeliefert, die Static Web App bei Änderungen unter `web/**` oder `api/**` (weil sie die verwalteten Functions mit ausrollt). Ein manueller `workflow_dispatch` deployt immer beide Ziele. Das Dashboard und seine Lese-APIs erfordern eine Anmeldung über GitHub; nur der Webhook-Endpunkt ist anonym erreichbar und zusätzlich durch `INGESTION_KEY` geschützt.
+On a push to `main`, the `.github/workflows/azure-static-web-app.yml` workflow
+deploys both the `web` directory with the managed Functions and the compiled
+standalone Azure Function App `app-gcstatistics-poc`. Each deployment runs only
+when its corresponding sources have changed: the standalone Function App is
+deployed for changes under `api/**`, while the Static Web App is deployed for
+changes under `web/**` or `api/**` because it also deploys the managed
+Functions. A manual `workflow_dispatch` always deploys both targets. The
+dashboard and its read APIs require GitHub authentication; only the webhook
+endpoint is accessible anonymously, and it is additionally protected by
+`INGESTION_KEY`.
 
 ### API
 
-| Methode | Route | Zweck |
+| Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/api/usage` | Payload validieren und Session speichern/aktualisieren |
-| `GET` | `/api/repositories` | bekannte Repositories auflisten |
-| `GET` | `/api/reports/monthly?from=2026-01&to=2026-12` | repositoryübergreifende Monatswerte nach Person und Modell sowie AI Credits pro Monat und Repository (`repository` optional) |
+| `POST` | `/api/usage` | Validate the payload and store or update the session |
+| `GET` | `/api/repositories` | List known repositories |
+| `GET` | `/api/reports/monthly?from=2026-01&to=2026-12` | Return cross-repository monthly values by person and model, plus AI credits per month and repository (`repository` is optional) |
 
-### Lokal entwickeln
+### Local development
 
-Azurite und Azure Functions Core Tools müssen lokal vorhanden sein. Die Beispieldatei kopieren, `INGESTION_KEY` setzen und dann starten:
+Azurite and Azure Functions Core Tools must be installed locally. Copy the
+example file, set `INGESTION_KEY`, and then start the application:
 
 ```powershell
 Copy-Item api\local.settings.example.json api\local.settings.json
@@ -199,4 +224,6 @@ npm test
 npm start
 ```
 
-Das statische Frontend kann mit der Static Web Apps CLI zusammen mit der lokalen Function ausgeführt werden. Der Kern ist dependency-light; neben dem offiziellen Azure Functions SDK wird nur der offizielle Table-Storage-Client verwendet.
+The static frontend can be run with the Static Web Apps CLI alongside the local
+Function. The core is dependency-light; besides the official Azure Functions
+SDK, it uses only the official Table Storage client.
