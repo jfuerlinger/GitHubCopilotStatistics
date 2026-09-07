@@ -70,9 +70,9 @@ function render() {
   ].map(([label,value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 
   const months = new Map();
-  visible.forEach(row => months.set(row.month, (months.get(row.month) || 0) + row.inputTokens + row.outputTokens));
-  const max = Math.max(...months.values(), 1);
-  elements.chart.innerHTML = months.size ? [...months].sort().map(([month,total]) => `<div class="bar-group"><span class="bar-value">${number.format(total)}</span><div class="bar-track"><div class="bar" style="height:${Math.max(2,total/max*100)}%"></div></div><span class="bar-label">${month}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
+  visible.forEach(row => months.set(row.month, (months.get(row.month) || 0) + row.githubAiCredits));
+  const max = Math.max(...months.values(), 0.01);
+  elements.chart.innerHTML = months.size ? [...months].sort().map(([month,total]) => `<div class="bar-group"><span class="bar-value">${decimal.format(total)}</span><div class="bar-track"><div class="bar credits" style="height:${Math.max(2,total/max*100)}%"></div></div><span class="bar-label">${month}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
 
   const credits = new Map();
   visible.forEach(row => credits.set(row.actor, (credits.get(row.actor) || 0) + row.githubAiCredits));
