@@ -1,9 +1,15 @@
 # GitHub Copilot session usage webhook
 
 `.github/hooks/copilot-usage-webhook.json` registers a Copilot CLI `agentStop`
-hook. It loads the webhook sender from the public
-[Copilot usage webhook Gist](https://gist.github.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363)
-when the hook runs.
+hook. It runs the sender script that is checked into this repository at
+`.github/hooks/scripts/send-copilot-session-usage.py` (originally published in
+the [Copilot usage webhook Gist](https://gist.github.com/jfuerlinger/b24459aea86a5b7e0881506b360e6363)),
+so no code is downloaded at runtime. The script only uses the Python standard
+library and `curl`, and it runs with a locally installed Python
+(`COPILOT_USAGE_PYTHON`, `python`, `python3`, `py`, or an interpreter that `uv`
+already has installed); if none is present the hook stops with a clear error
+instead of downloading a runtime. Set `COPILOT_USAGE_SCRIPT`
+to run the script from another path.
 
 After every completed Copilot agent interaction in this repository, the hook
 sends the cumulative session usage as a JSON `POST`. By default it targets the
@@ -127,11 +133,11 @@ the Azure pricing documentation for current prices and limits.
 
 ### User attribution
 
-The Gist sender automatically determines the actor and includes it in the
+The sender script automatically determines the actor and includes it in the
 payload's `actor` field. The Function determines `actor` in this order:
 
 1. `actor` in the JSON (a string or an object with `login`, `name`, or `id`) —
-   the Gist sender populates it automatically using this precedence:
+   the sender script populates it automatically using this precedence:
    `COPILOT_USAGE_ACTOR` environment variable → `GITHUB_ACTOR` (for example,
    when set in GitHub Actions) → local `git config user.name` →
    `git config user.email`.

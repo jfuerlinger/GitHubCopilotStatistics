@@ -41,6 +41,20 @@ test("aggregates by month, actor and model", () => {
   assert.equal(rows[0].githubAiCredits, 0.51);
 });
 
+test("separates rows by day within the same month", () => {
+  const base: UsageEntity = {
+    partitionKey: "repo", rowKey: "1", sessionId: "s1", capturedAt: Date.UTC(2026, 8, 7),
+    month: "2026-09", actor: "joe", model: "gpt", repository: "repo", branch: "main",
+    commit: "abc", source: "store", stopReason: "end_turn", inputTokens: 10,
+    outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0,
+    githubAiCredits: 0.25
+  };
+  const rows = aggregateUsage([base, { ...base, rowKey: "2", sessionId: "s2", capturedAt: Date.UTC(2026, 8, 8) }]);
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows.map(row => row.date), ["2026-09-07", "2026-09-08"]);
+  assert.equal(rows[0].month, "2026-09");
+});
+
 test("aggregates AI credits by month and repository", () => {
   const rows = aggregateCreditsByMonthAndRepository([
     { partitionKey: "repo1", rowKey: "1", sessionId: "s1", capturedAt: 1, month: "2026-09", actor: "joe", model: "gpt", repository: "repo-a", branch: "main", commit: "a", source: "store", stopReason: "end_turn", inputTokens: 10, outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, githubAiCredits: 0.25 },
