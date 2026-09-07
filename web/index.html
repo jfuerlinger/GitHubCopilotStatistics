@@ -26,16 +26,6 @@
       <label>Bis<input id="to" type="month"></label>
       <label>Person<select id="actor"><option value="all">Alle Personen</option></select></label>
       <label>Preis je AI Credit (€)<input id="credit-price" type="number" min="0" step="0.001" value="0.04"></label>
-      <fieldset class="group-by">
-        <legend>Gruppieren nach</legend>
-        <label><input type="checkbox" class="group-by-option" value="date" checked>Datum</label>
-        <label><input type="checkbox" class="group-by-option" value="actor" checked>Person</label>
-        <label><input type="checkbox" class="group-by-option" value="model" checked>Modell</label>
-      </fieldset>
-      <label>Datums-Granularität<select id="date-granularity">
-        <option value="day">Tag</option>
-        <option value="month" selected>Monat</option>
-      </select></label>
       <button id="load" type="button">Auswerten</button>
     </section>
 
@@ -63,6 +53,18 @@
 
     <section class="panel" aria-labelledby="details-title">
       <div class="panel-heading"><div><span class="eyebrow">Details</span><h2 id="details-title">Verbrauch nach Person und Modell</h2></div></div>
+      <div class="tool-area" aria-label="Werkzeuge für die Detailansicht">
+        <fieldset class="group-by">
+          <legend>Gruppieren nach</legend>
+          <label><input type="checkbox" class="group-by-option" value="date" checked>Datum</label>
+          <label><input type="checkbox" class="group-by-option" value="actor" checked>Person</label>
+          <label><input type="checkbox" class="group-by-option" value="model" checked>Modell</label>
+        </fieldset>
+        <label>Datums-Granularität<select id="date-granularity">
+          <option value="day">Tag</option>
+          <option value="month" selected>Monat</option>
+        </select></label>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr id="details-head"></tr></thead>

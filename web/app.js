@@ -80,14 +80,14 @@ function dateGranularity() {
   return elements.dateGranularity.value === "day" ? "day" : "month";
 }
 
-function dateValue(row) {
+function detailDateValue(row) {
   const date = row.date || row.month || "";
   return dateGranularity() === "day" ? date : date.slice(0, 7);
 }
 
 function normalize(row) {
   return {
-    date: dateValue(row), month: row.month, actor: row.actor, model: row.model,
+    date: detailDateValue(row), month: row.month, actor: row.actor, model: row.model,
     sessions: row.sessions || 0, inputTokens: row.inputTokens || 0, outputTokens: row.outputTokens || 0,
     cacheTokens: (row.cacheReadTokens || 0) + (row.cacheWriteTokens || 0),
     reasoningTokens: row.reasoningTokens || 0, githubAiCredits: row.githubAiCredits || 0,
@@ -125,7 +125,7 @@ function render() {
   ].map(([label,value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 
   const months = new Map();
-  visible.forEach(row => { const key = dateValue(row); months.set(key, (months.get(key) || 0) + row.githubAiCredits); });
+  visible.forEach(row => { const key = row.month || (row.date || "").slice(0, 7); months.set(key, (months.get(key) || 0) + row.githubAiCredits); });
   const max = Math.max(...months.values(), 0.01);
   elements.chart.innerHTML = months.size ? [...months].sort().map(([month,total]) => `<div class="bar-group"><span class="bar-value">${decimal.format(total)}</span><div class="bar-track"><div class="bar credits" style="height:${Math.max(2,total/max*100)}%"></div></div><span class="bar-label">${month}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
 
