@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aggregateUsage } from "../src/lib/reports.js";
+import { aggregateCreditsByMonthAndRepository, aggregateUsage } from "../src/lib/reports.js";
 import { monthFromTimestamp, normalizeRepository, parseUsageRequest, repositoryKey, resolveActor } from "../src/lib/validation.js";
 import type { UsageEntity, UsageRequest } from "../src/lib/types.js";
 
@@ -39,4 +39,16 @@ test("aggregates by month, actor and model", () => {
   assert.equal(rows[0].sessions, 2);
   assert.equal(rows[0].inputTokens, 15);
   assert.equal(rows[0].githubAiCredits, 0.51);
+});
+
+test("aggregates AI credits by month and repository", () => {
+  const rows = aggregateCreditsByMonthAndRepository([
+    { partitionKey: "repo1", rowKey: "1", sessionId: "s1", capturedAt: 1, month: "2026-09", actor: "joe", model: "gpt", repository: "repo-a", branch: "main", commit: "a", source: "store", stopReason: "end_turn", inputTokens: 10, outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, githubAiCredits: 0.25 },
+    { partitionKey: "repo2", rowKey: "2", sessionId: "s2", capturedAt: 2, month: "2026-09", actor: "ann", model: "gpt", repository: "repo-b", branch: "main", commit: "b", source: "store", stopReason: "end_turn", inputTokens: 11, outputTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, githubAiCredits: 0.35 },
+    { partitionKey: "repo1", rowKey: "3", sessionId: "s3", capturedAt: 3, month: "2026-09", actor: "joe", model: "gpt", repository: "repo-a", branch: "main", commit: "a", source: "store", stopReason: "end_turn", inputTokens: 12, outputTokens: 4, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, githubAiCredits: 0.15 }
+  ]);
+  assert.deepEqual(rows, [
+    { month: "2026-09", repository: "repo-a", githubAiCredits: 0.4 },
+    { month: "2026-09", repository: "repo-b", githubAiCredits: 0.35 }
+  ]);
 });

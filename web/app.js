@@ -1,4 +1,4 @@
-const elements = Object.fromEntries(["status","repository","from","to","actor","load","summary","chart","details"].map(id => [id, document.getElementById(id)]));
+const elements = Object.fromEntries(["status","from","to","actor","load","summary","chart","details","repoBreakdown"].map(id => [id, document.getElementById(id)]));
 elements.creditsChart = document.getElementById("credits-chart");
 elements.themeToggle = document.getElementById("theme-toggle");
 elements.themeIcon = document.getElementById("theme-icon");
@@ -29,6 +29,7 @@ const currentMonth = new Date().toISOString().slice(0, 7);
 elements.from.value = `${new Date().getUTCFullYear()}-01`;
 elements.to.value = currentMonth;
 let rows = [];
+let repoBreakdown = [];
 
 function setStatus(message, error = false) {
   elements.status.textContent = message;
@@ -43,15 +44,6 @@ async function api(path) {
   const response = await fetch(`/api/${path}`);
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `HTTP ${response.status}`);
   return response.json();
-}
-
-async function loadRepositories() {
-  try {
-    const data = await api("repositories");
-    elements.repository.innerHTML = '<option value="">Repository wählen</option>' + data.repositories.map(item => `<option value="${escapeHtml(item.repository)}">${escapeHtml(item.repository)}</option>`).join("");
-    setStatus(`${data.repositories.length} Repositories`);
-    if (data.repositories.length === 1) { elements.repository.value = data.repositories[0].repository; await loadReport(); }
-  } catch (error) { setStatus(error.message, true); }
 }
 
 function filteredRows() {
@@ -79,15 +71,18 @@ function render() {
   const maxCredits = Math.max(...credits.values(), 0.01);
   elements.creditsChart.innerHTML = credits.size ? [...credits].sort((a,b) => b[1] - a[1]).map(([actor,total]) => `<div class="bar-group"><span class="bar-value">${decimal.format(total)}</span><div class="bar-track"><div class="bar credits" style="height:${Math.max(2,total/maxCredits*100)}%"></div></div><span class="bar-label">${escapeHtml(actor)}</span></div>`).join("") : '<p class="empty">Keine Daten im gewählten Zeitraum.</p>';
 
+  elements.repoBreakdown.innerHTML = repoBreakdown.length ? repoBreakdown.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.repository)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td></tr>`).join("") : '<tr><td colspan="3" class="empty">Keine Daten.</td></tr>';
+
   elements.details.innerHTML = visible.length ? visible.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${escapeHtml(row.actor)}</td><td>${escapeHtml(row.model)}</td><td class="number">${number.format(row.sessions)}</td><td class="number">${number.format(row.inputTokens)}</td><td class="number">${number.format(row.outputTokens)}</td><td class="number">${number.format(row.cacheReadTokens + row.cacheWriteTokens)}</td><td class="number">${number.format(row.reasoningTokens)}</td><td class="number">${decimal.format(row.githubAiCredits)}</td></tr>`).join("") : '<tr><td colspan="9" class="empty">Keine Daten.</td></tr>';
 }
 
 async function loadReport() {
-  if (!elements.repository.value) return setStatus("Bitte Repository wählen", true);
   setStatus("Auswertung wird geladen …");
   try {
-    const query = new URLSearchParams({ repository: elements.repository.value, from: elements.from.value, to: elements.to.value });
-    rows = (await api(`reports/monthly?${query}`)).rows;
+    const query = new URLSearchParams({ from: elements.from.value, to: elements.to.value });
+    const report = await api(`reports/monthly?${query}`);
+    rows = report.rows || [];
+    repoBreakdown = report.repoBreakdown || [];
     const actors = [...new Set(rows.map(row => row.actor))].sort();
     const selection = elements.actor.value;
     elements.actor.innerHTML = '<option value="all">Alle Personen</option>' + actors.map(actor => `<option value="${escapeHtml(actor)}">${escapeHtml(actor)}</option>`).join("");
@@ -99,4 +94,4 @@ async function loadReport() {
 
 elements.load.addEventListener("click", loadReport);
 elements.actor.addEventListener("change", render);
-loadRepositories();
+loadReport();

@@ -22,7 +22,6 @@
   <main>
     <section class="filters" aria-labelledby="filter-title">
       <h2 id="filter-title">Auswertung</h2>
-      <label>Repository<select id="repository"><option value="">Repository wählen</option></select></label>
       <label>Von<input id="from" type="month"></label>
       <label>Bis<input id="to" type="month"></label>
       <label>Person<select id="actor"><option value="all">Alle Personen</option></select></label>
@@ -33,12 +32,22 @@
 
     <section class="panel" aria-labelledby="chart-title">
       <div class="panel-heading"><div><span class="eyebrow">Trend</span><h2 id="chart-title">AI Credits pro Monat</h2></div></div>
-      <div id="chart" class="chart"><p class="empty">Repository und Zeitraum auswählen.</p></div>
+      <div id="chart" class="chart"><p class="empty">Zeitraum auswählen.</p></div>
     </section>
 
     <section class="panel" aria-labelledby="credits-chart-title">
       <div class="panel-heading"><div><span class="eyebrow">Verteilung</span><h2 id="credits-chart-title">AI Credits pro Person</h2></div></div>
-      <div id="credits-chart" class="chart"><p class="empty">Repository und Zeitraum auswählen.</p></div>
+      <div id="credits-chart" class="chart"><p class="empty">Zeitraum auswählen.</p></div>
+    </section>
+
+    <section class="panel" aria-labelledby="repo-breakdown-title">
+      <div class="panel-heading"><div><span class="eyebrow">Repository</span><h2 id="repo-breakdown-title">AI Credits pro Monat und Repo</h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Monat</th><th>Repository</th><th class="number">AI Credits</th></tr></thead>
+          <tbody id="repo-breakdown"><tr><td colspan="3" class="empty">Noch keine Daten geladen.</td></tr></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="details-title">

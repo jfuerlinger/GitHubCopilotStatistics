@@ -185,7 +185,7 @@ Der Workflow `.github/workflows/azure-static-web-app.yml` veröffentlicht bei ei
 |---|---|---|
 | `POST` | `/api/usage` | Payload validieren und Session speichern/aktualisieren |
 | `GET` | `/api/repositories` | bekannte Repositories auflisten |
-| `GET` | `/api/reports/monthly?repository=…&from=2026-01&to=2026-12` | monatliche Werte nach Person und Modell |
+| `GET` | `/api/reports/monthly?from=2026-01&to=2026-12` | repositoryübergreifende Monatswerte nach Person und Modell sowie AI Credits pro Monat und Repository (`repository` optional) |
 
 ### Lokal entwickeln
 

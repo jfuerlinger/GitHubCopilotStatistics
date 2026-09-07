@@ -86,12 +86,13 @@ export async function listRepositories(): Promise<Array<{ id: string; repository
   return result.sort((a, b) => a.repository.localeCompare(b.repository));
 }
 
-export async function queryUsage(repository: string, from: string, to: string): Promise<UsageEntity[]> {
+export async function queryUsage(repository: string | null, from: string, to: string): Promise<UsageEntity[]> {
   await initialize();
   const { usage } = clients();
-  const partitionKey = repositoryKey(repository.replace(/\.git$/i, "").replace(/\/$/, ""));
   const result: UsageEntity[] = [];
-  const filter = odata`PartitionKey eq ${partitionKey} and month ge ${from} and month le ${to}`;
+  const filter = repository
+    ? odata`PartitionKey eq ${repositoryKey(repository.replace(/\.git$/i, "").replace(/\/$/, ""))} and month ge ${from} and month le ${to}`
+    : odata`month ge ${from} and month le ${to}`;
   for await (const entity of usage.listEntities<UsageEntity>({ queryOptions: { filter } })) result.push(entity);
   return result;
 }
