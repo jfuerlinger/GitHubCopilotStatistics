@@ -134,7 +134,13 @@ the Azure pricing documentation for current prices and limits.
 ### User attribution
 
 The sender script automatically determines the actor and includes it in the
-payload's `actor` field. The Function determines `actor` in this order:
+payload's `actor` field. It searches the matching session first in the Copilot
+CLI `session-store.db`/`local-session.db`, then in the VS Code and VS Code
+Insiders `local-session.db`/`session-store.db` files. Editor user-data paths are
+detected for Windows (`%APPDATA%`), macOS (`~/Library/Application Support`) and
+Linux (`$XDG_CONFIG_HOME` or `~/.config`). The first matching store is used, so
+copied or synchronized databases cannot duplicate usage. The Function determines
+`actor` in this order:
 
 1. `actor` in the JSON (a string or an object with `login`, `name`, or `id`) —
    the sender script populates it automatically using this precedence:

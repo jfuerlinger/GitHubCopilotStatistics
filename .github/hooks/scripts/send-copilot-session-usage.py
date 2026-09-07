@@ -77,7 +77,7 @@ def ai_credits_from_nano(nano_ai_credits: int) -> float:
 
 
 def query_usage_store(
-    database: Path, session_id: str
+    database: Path, session_id: str, source: str = "session-store"
 ) -> tuple[list[dict[str, Any]], str] | None:
     if not database.is_file():
         return None
@@ -85,10 +85,15 @@ def query_usage_store(
     try:
         connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
     except sqlite3.Error as error:
-        print(f"Cannot open Copilot usage store: {error}", file=sys.stderr)
+        print(f"Cannot open Copilot usage store {database}: {error}", file=sys.stderr)
         return None
 
     try:
+        table = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'assistant_usage_events'"
+        ).fetchone()
+        if table is None:
+            return None
         rows = connection.execute(
             """
             SELECT
@@ -107,7 +112,7 @@ def query_usage_store(
             (session_id,),
         ).fetchall()
     except sqlite3.Error as error:
-        print(f"Cannot query Copilot usage store: {error}", file=sys.stderr)
+        print(f"Cannot query Copilot usage store {database}: {error}", file=sys.stderr)
         return None
     finally:
         connection.close()
@@ -136,8 +141,66 @@ def query_usage_store(
                 nano_aiu,
             ) in rows
         ],
-        "session-store",
+        source,
     )
+
+
+def editor_data_directories() -> list[tuple[Path, str]]:
+    """Return the platform-specific VS Code user-data directories."""
+    home = Path.home()
+    app_data = os.environ.get("APPDATA")
+    if app_data:
+        base = Path(app_data)
+    elif sys.platform == "darwin":
+        base = home / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+
+    return [
+        (base / "Code", "vscode"),
+        (base / "Code - Insiders", "vscode-insiders"),
+    ]
+
+
+def usage_store_candidates() -> list[tuple[Path, str]]:
+    """Return known Copilot CLI, VS Code and VS Code Insiders stores."""
+    copilot_home = Path(os.environ.get("COPILOT_HOME", Path.home() / ".copilot"))
+    candidates = [
+        (copilot_home / "session-store.db", "copilot-cli"),
+        (copilot_home / "local-session.db", "copilot-cli"),
+    ]
+
+    for editor_dir, source in editor_data_directories():
+        storage = editor_dir / "User" / "globalStorage"
+        if not storage.is_dir():
+            continue
+        for extension_dir in sorted(storage.glob("github.copilot*")):
+            if not extension_dir.is_dir():
+                continue
+            for database_name in ("local-session.db", "session-store.db"):
+                candidates.extend(
+                    (database, source)
+                    for database in sorted(extension_dir.rglob(database_name))
+                )
+
+    # Keep paths unique while preserving CLI, VS Code, Insiders precedence.
+    unique: dict[Path, str] = {}
+    for database, source in candidates:
+        unique.setdefault(database.resolve(), source)
+    return list(unique.items())
+
+
+def query_all_usage_stores(session_id: str) -> tuple[list[dict[str, Any]], str] | None:
+    """Read the session from the first store containing it.
+
+    Session IDs are globally unique. Returning the first match avoids counting
+    the same usage twice when an editor store has been copied or synchronized.
+    """
+    for database, source in usage_store_candidates():
+        usage = query_usage_store(database, session_id, source)
+        if usage is not None:
+            return usage
+    return None
 
 
 def usage_from_events(events_path: Path) -> tuple[list[dict[str, Any]], str] | None:
@@ -241,9 +304,9 @@ def main() -> int:
         return 2
 
     cwd = Path(hook_input.get("cwd") or os.getcwd()).resolve()
-    copilot_home = Path(os.environ.get("COPILOT_HOME", Path.home() / ".copilot"))
-    usage = query_usage_store(copilot_home / "session-store.db", session_id)
+    usage = query_all_usage_stores(session_id)
     if usage is None:
+        copilot_home = Path(os.environ.get("COPILOT_HOME", Path.home() / ".copilot"))
         usage = usage_from_events(
             copilot_home / "session-state" / session_id / "events.jsonl"
         )
